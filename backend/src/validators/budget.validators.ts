@@ -22,18 +22,22 @@ const budgetCategorySchema = z.object({
   budgetGroups: z.array(budgetGroupSchema).optional().default([]),
 });
 
-export const createBudgetSchema = z.object({
+// Base shape without refinement — used to derive the partial (PATCH) schema
+const budgetBaseSchema = z.object({
   name:          z.string().regex(/^[a-zA-Z0-9 ]{1,50}$/, 'Max 50 alphanumeric characters (spaces allowed)'),
   beginningDate: z.coerce.date(),
   endingDate:    z.coerce.date(),
   incomes:       z.array(budgetCategorySchema).optional().default([]),
   expenses:      z.array(budgetCategorySchema).optional().default([]),
-}).refine(
+});
+
+export const createBudgetSchema = budgetBaseSchema.refine(
   (d) => d.endingDate > d.beginningDate,
   { message: 'endingDate must be after beginningDate', path: ['endingDate'] },
 );
 
-export const updateBudgetSchema = createBudgetSchema.partial().refine(
+// Zod v4: .partial() cannot be called on a refined schema — derive from base
+export const updateBudgetSchema = budgetBaseSchema.partial().refine(
   (d) => !d.beginningDate || !d.endingDate || d.endingDate > d.beginningDate,
   { message: 'endingDate must be after beginningDate', path: ['endingDate'] },
 );
