@@ -49,14 +49,15 @@ function makeBucket(
 
 function advance(date: Date, frequency: Frequency): Date {
   const d = new Date(date);
+  // Use UTC methods to avoid local-timezone day drift on month/year boundaries
   switch (frequency) {
-    case 'daily':        d.setDate(d.getDate() + 1);       break;
-    case 'weekly':       d.setDate(d.getDate() + 7);       break;
-    case 'monthly':      d.setMonth(d.getMonth() + 1);     break;
-    case 'quarterly':    d.setMonth(d.getMonth() + 3);     break;
-    case 'semiannually': d.setMonth(d.getMonth() + 6);     break;
-    case 'annually':     d.setFullYear(d.getFullYear() + 1); break;
-    default:             d.setFullYear(d.getFullYear() + 100); // safety exit
+    case 'daily':        d.setUTCDate(d.getUTCDate() + 1);         break;
+    case 'weekly':       d.setUTCDate(d.getUTCDate() + 7);         break;
+    case 'monthly':      d.setUTCMonth(d.getUTCMonth() + 1);       break;
+    case 'quarterly':    d.setUTCMonth(d.getUTCMonth() + 3);       break;
+    case 'semiannually': d.setUTCMonth(d.getUTCMonth() + 6);       break;
+    case 'annually':     d.setUTCFullYear(d.getUTCFullYear() + 1); break;
+    default:             d.setUTCFullYear(d.getUTCFullYear() + 100); // safety exit
   }
   return d;
 }
