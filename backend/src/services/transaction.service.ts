@@ -6,8 +6,10 @@ import type { BudgetItem } from '@prisma/client';
 // ─── Bucket allocation ───────────────────────────────────────────────────────
 
 /**
- * Finds the ItemBucket whose plannedDate is the closest date on or before
+ * Finds the ItemBucket whose currentDate is the closest date on or before
  * txdatetime within a BudgetItem's bucket list.
+ * currentDate holds the occurrence date for each bucket (plannedDate is the
+ * same on all buckets — copied from the parent item).
  * Returns the bucket index, or -1 if none qualifies.
  */
 function findBucketIndex(item: BudgetItem, txdatetime: Date): number {
@@ -15,7 +17,7 @@ function findBucketIndex(item: BudgetItem, txdatetime: Date): number {
   let bestDiff = Infinity;
 
   item.buckets.forEach((bucket, idx) => {
-    const diff = txdatetime.getTime() - bucket.plannedDate.getTime();
+    const diff = txdatetime.getTime() - bucket.currentDate.getTime();
     if (diff >= 0 && diff < bestDiff) {
       bestDiff = diff;
       best = idx;
@@ -70,11 +72,13 @@ async function allocateToItemBucket(
 
   // Mutate the embedded document in memory then write back
   const categories = inIncomes ? budget.incomes : budget.expenses;
-  categories[foundCatIdx]
+  const bucket = categories[foundCatIdx]
     .budgetGroups[foundGrpIdx]
     .budgetItems[foundItemIdx]
-    .buckets[foundBucketIdx]
-    .currentAmount += txamount;
+    .buckets[foundBucketIdx];
+
+  bucket.currentAmount += txamount;
+  bucket.currentDate    = txdatetime;
 
   await prisma.budget.update({
     where: { id: budget.id },
