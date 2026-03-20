@@ -27,7 +27,7 @@ export function generateBuckets(
   let current = new Date(start);
 
   while (current <= endingDate) {
-    buckets.push(makeBucket(current, item));
+    buckets.push(makeBucket(new Date(current), item));
     current = advance(current, item.frequency as Frequency);
   }
 
@@ -35,12 +35,12 @@ export function generateBuckets(
 }
 
 function makeBucket(
-  date: Date,
-  item: Pick<BudgetItem, 'plannedAmount' | 'currency'>,
+  occurrenceDate: Date,
+  item: Pick<BudgetItem, 'plannedDate' | 'plannedAmount' | 'currency'>,
 ): ItemBucket {
   return {
-    plannedDate:   new Date(date),
-    currentDate:   new Date(date),
+    plannedDate:   new Date(item.plannedDate), // copied from parent item, same on every bucket
+    currentDate:   new Date(occurrenceDate),   // the specific occurrence within the date range
     plannedAmount: item.plannedAmount,
     currentAmount: 0,
     currency:      item.currency,
