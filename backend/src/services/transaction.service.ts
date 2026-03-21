@@ -6,15 +6,17 @@ import type { BudgetItem } from '@prisma/client';
 // ─── Bucket allocation ───────────────────────────────────────────────────────
 
 /**
- * Returns the index of the first unallocated bucket (currentAmount === 0).
- * All buckets start with plannedDate = currentDate = item.plannedDate.
- * Once a transaction is allocated, currentDate is updated to txdatetime,
- * enabling planned-vs-actual date tracking. Subsequent transactions fill
- * the next available (unallocated) bucket in order.
- * Returns -1 if all buckets are already allocated.
+ * Returns the index of the bucket whose plannedDate is closest to txdatetime.
+ * Returns -1 only if the item has no buckets.
  */
-function findBucketIndex(item: BudgetItem, _txdatetime: Date): number {
-  return item.buckets.findIndex((bucket) => bucket.currentAmount === 0);
+function findBucketIndex(item: BudgetItem, txdatetime: Date): number {
+  let best     = -1;
+  let bestDiff = Infinity;
+  item.buckets.forEach((bucket, idx) => {
+    const diff = Math.abs(txdatetime.getTime() - bucket.plannedDate.getTime());
+    if (diff < bestDiff) { bestDiff = diff; best = idx; }
+  });
+  return best;
 }
 
 /**
