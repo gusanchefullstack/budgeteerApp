@@ -19,7 +19,7 @@ export function generateBuckets(
   endingDate: Date,
 ): ItemBucket[] {
   if (item.frequency === 'onetime') {
-    return [makeBucket(item.plannedDate, item)];
+    return [makeBucket(item)];
   }
 
   const start = item.plannedDate > beginningDate ? item.plannedDate : beginningDate;
@@ -27,7 +27,7 @@ export function generateBuckets(
   let current = new Date(start);
 
   while (current <= endingDate) {
-    buckets.push(makeBucket(new Date(current), item));
+    buckets.push(makeBucket(item));
     current = advance(current, item.frequency as Frequency);
   }
 
@@ -35,12 +35,11 @@ export function generateBuckets(
 }
 
 function makeBucket(
-  occurrenceDate: Date,
   item: Pick<BudgetItem, 'plannedDate' | 'plannedAmount' | 'currency'>,
 ): ItemBucket {
   return {
-    plannedDate:   new Date(item.plannedDate), // copied from parent item, same on every bucket
-    currentDate:   new Date(occurrenceDate),   // the specific occurrence within the date range
+    plannedDate:   new Date(item.plannedDate), // copied from parent item — never changes
+    currentDate:   new Date(item.plannedDate), // starts equal to plannedDate; updated to txdatetime on allocation
     plannedAmount: item.plannedAmount,
     currentAmount: 0,
     currency:      item.currency,

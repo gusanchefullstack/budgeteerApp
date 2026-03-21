@@ -6,25 +6,15 @@ import type { BudgetItem } from '@prisma/client';
 // ─── Bucket allocation ───────────────────────────────────────────────────────
 
 /**
- * Finds the ItemBucket whose currentDate is the closest date on or before
- * txdatetime within a BudgetItem's bucket list.
- * currentDate holds the occurrence date for each bucket (plannedDate is the
- * same on all buckets — copied from the parent item).
- * Returns the bucket index, or -1 if none qualifies.
+ * Returns the index of the first unallocated bucket (currentAmount === 0).
+ * All buckets start with plannedDate = currentDate = item.plannedDate.
+ * Once a transaction is allocated, currentDate is updated to txdatetime,
+ * enabling planned-vs-actual date tracking. Subsequent transactions fill
+ * the next available (unallocated) bucket in order.
+ * Returns -1 if all buckets are already allocated.
  */
-function findBucketIndex(item: BudgetItem, txdatetime: Date): number {
-  let best = -1;
-  let bestDiff = Infinity;
-
-  item.buckets.forEach((bucket, idx) => {
-    const diff = txdatetime.getTime() - bucket.currentDate.getTime();
-    if (diff >= 0 && diff < bestDiff) {
-      bestDiff = diff;
-      best = idx;
-    }
-  });
-
-  return best;
+function findBucketIndex(item: BudgetItem, _txdatetime: Date): number {
+  return item.buckets.findIndex((bucket) => bucket.currentAmount === 0);
 }
 
 /**
