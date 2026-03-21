@@ -62,19 +62,39 @@ async function allocateToItemBucket(
 
   if (foundBucketIdx === -1) return; // no matching bucket — allocation skipped
 
-  // Mutate the embedded document in memory then write back
+  // Rebuild the nested structure with explicit new objects so Prisma serializes
+  // every changed field (including DateTime) correctly on write-back.
   const categories = inIncomes ? budget.incomes : budget.expenses;
-  const bucket = categories[foundCatIdx]
-    .budgetGroups[foundGrpIdx]
-    .budgetItems[foundItemIdx]
-    .buckets[foundBucketIdx];
-
-  bucket.currentAmount += txamount;
-  bucket.currentDate    = txdatetime;
+  const updatedCategories = categories.map((cat, ci) => {
+    if (ci !== foundCatIdx) return cat;
+    return {
+      ...cat,
+      budgetGroups: cat.budgetGroups.map((grp, gi) => {
+        if (gi !== foundGrpIdx) return grp;
+        return {
+          ...grp,
+          budgetItems: grp.budgetItems.map((item, ii) => {
+            if (ii !== foundItemIdx) return item;
+            return {
+              ...item,
+              buckets: item.buckets.map((bucket, bi) => {
+                if (bi !== foundBucketIdx) return bucket;
+                return {
+                  ...bucket,
+                  currentAmount: bucket.currentAmount + txamount,
+                  currentDate:   new Date(txdatetime),
+                };
+              }),
+            };
+          }),
+        };
+      }),
+    };
+  });
 
   await prisma.budget.update({
     where: { id: budget.id },
-    data:  inIncomes ? { incomes: budget.incomes } : { expenses: budget.expenses },
+    data:  inIncomes ? { incomes: updatedCategories } : { expenses: updatedCategories },
   });
 }
 
