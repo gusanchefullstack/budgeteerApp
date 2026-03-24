@@ -371,6 +371,22 @@ const updateSchema = baseSchema.partial().refine(...);
 
 Express 5 natively catches errors thrown (or returned as rejected promises) inside `async` route handlers without needing `express-async-errors` or manual `try/catch`. Errors flow straight to the global `errorHandler` middleware.
 
+### Express 5 `req.query` is a read-only getter
+
+In Express 5, `req.query` is defined as a **read-only getter** on the `IncomingMessage` prototype. Attempting to reassign it (e.g. `req.query = parsedValue`) throws a `TypeError` at runtime even if TypeScript is satisfied by a cast. The fix is to mutate the existing object in-place rather than replace the reference:
+
+```ts
+// ❌ throws TypeError in Express 5
+(req as any).query = result.data;
+
+// ✅ mutate in place
+const q = req.query as Record<string, unknown>;
+Object.keys(q).forEach(k => delete q[k]);
+Object.assign(q, result.data);
+```
+
+This affects any `validate(schema, 'query')` middleware call. `req.body` and `req.params` are writable and unaffected.
+
 ### UTC-safe date arithmetic
 
 JavaScript `Date` methods like `getMonth()` return local time, which causes bucket `plannedDate` values to drift when the server timezone differs from UTC. All bucket date arithmetic in `utils/buckets.ts` uses `Date.UTC()` and UTC getters (`getUTCFullYear()`, `getUTCMonth()`, etc.) to ensure consistent behavior regardless of server timezone.

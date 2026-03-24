@@ -15,8 +15,17 @@ export function validate(schema: ZodSchema, target: RequestTarget = 'body') {
     if (!result.success) {
       return next(new AppError(400, 'Validation failed', result.error.flatten()));
     }
-    // Replace with coerced / defaulted value
-    (req as unknown as Record<string, unknown>)[target] = result.data;
+    // Replace with coerced / defaulted value.
+    // req.query is a read-only getter in Express 5, so mutate in-place instead
+    // of reassigning the reference. body and params are writable, so the cast
+    // assignment is fine for those two targets.
+    if (target === 'query') {
+      const q = req.query as Record<string, unknown>;
+      Object.keys(q).forEach(k => delete q[k]);
+      Object.assign(q, result.data);
+    } else {
+      (req as unknown as Record<string, unknown>)[target] = result.data;
+    }
     next();
   };
 }
