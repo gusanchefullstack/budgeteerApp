@@ -67,6 +67,10 @@ export async function getBudgetById(budgetId: string, userId: string) {
   return budget;
 }
 
+export async function getBudgetByUser(userId: string) {
+  return prisma.budget.findFirst({ where: { userId } });
+}
+
 export async function getBudgetTransactions(budgetId: string, userId: string) {
   // Verify ownership first
   await getBudgetById(budgetId, userId);

@@ -4,8 +4,8 @@ import type { RegisterInput, LoginInput } from '../validators/auth.validators';
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const token = await authService.registerUser(req.body as RegisterInput);
-    res.status(201).json({ success: true, token });
+    const result = await authService.registerUser(req.body as RegisterInput);
+    res.status(201).json({ success: true, ...result });
   } catch (err) {
     next(err);
   }
@@ -13,8 +13,17 @@ export async function register(req: Request, res: Response, next: NextFunction):
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const token = await authService.loginUser(req.body as LoginInput);
-    res.status(200).json({ success: true, token });
+    const result = await authService.loginUser(req.body as LoginInput);
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function me(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const user = await authService.getMe(req.user!.userId);
+    res.status(200).json({ success: true, data: user });
   } catch (err) {
     next(err);
   }

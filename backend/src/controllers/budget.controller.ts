@@ -7,6 +7,15 @@ import type {
   CreateItemInput, UpdateItemInput, DeleteItemInput,
 } from '../validators/budget.validators';
 
+export async function getMine(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const budget = await budgetService.getBudgetByUser(req.user!.userId);
+    res.status(200).json({ success: true, data: budget ?? null });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function create(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const budget = await budgetService.createBudget(req.user!.userId, req.body as CreateBudgetInput);

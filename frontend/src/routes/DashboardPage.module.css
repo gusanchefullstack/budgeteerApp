@@ -1,0 +1,123 @@
+/* ─── Error state ────────────────────────────────────────────────────────────── */
+.errorState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ─── No-budget empty state ─────────────────────────────────────────────────── */
+.emptyRoot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 2rem;
+  animation: fade-in var(--duration-base) var(--ease-out-expo) both;
+}
+
+.emptyHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.emptySubtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* ─── Mode selection cards ──────────────────────────────────────────────────── */
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 860px;
+}
+
+.modeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1.75rem 1.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-base) var(--ease-out-expo),
+    box-shadow var(--duration-base) var(--ease-out-expo),
+    transform var(--duration-base) var(--ease-out-expo);
+  animation: slide-up var(--duration-slow) var(--ease-out-expo) both;
+}
+.modeCard:nth-child(1) { animation-delay: 0ms; }
+.modeCard:nth-child(2) { animation-delay: 80ms; }
+.modeCard:nth-child(3) { animation-delay: 160ms; }
+
+.modeCard:hover {
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.modeCardFeatured {
+  border-color: rgba(79, 142, 247, 0.3);
+  background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(79, 142, 247, 0.05) 100%);
+}
+.modeCardFeatured:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+}
+
+.modeIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modeIconTree   { background: var(--income-dim);  color: var(--income-base); }
+.modeIconWizard { background: var(--accent-dim);  color: var(--accent); }
+.modeIconQuick  { background: var(--bg-elevated); color: var(--text-secondary); }
+
+.modeTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modeDesc {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  flex: 1;
+}
+
+.modeCta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 0.25rem;
+  transition: opacity var(--duration-fast) var(--ease-in-out);
+}
+.modeCard:hover .modeCta { opacity: 0.7; }
+
+@media (max-width: 680px) {
+  .modeGrid { grid-template-columns: 1fr; }
+  .emptyTitle { font-size: 1.75rem; }
+}

@@ -1,0 +1,113 @@
+.root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-base);
+  position: relative;
+  overflow: hidden;
+  padding: 2rem 1rem;
+}
+
+/* ─── Ambient blobs ─────────────────────────────────────────────────────────── */
+.blob1,
+.blob2,
+.blob3 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.blob1 {
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(79, 142, 247, 0.12) 0%, transparent 70%);
+  top: -120px;
+  right: -100px;
+  animation: blob-drift 14s ease-in-out infinite alternate;
+}
+
+.blob2 {
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, rgba(245, 166, 35, 0.08) 0%, transparent 70%);
+  bottom: -60px;
+  left: -80px;
+  animation: blob-drift 18s ease-in-out infinite alternate-reverse;
+}
+
+.blob3 {
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(240, 74, 106, 0.07) 0%, transparent 70%);
+  top: 40%;
+  left: 10%;
+  animation: blob-drift 22s ease-in-out infinite alternate;
+}
+
+@keyframes blob-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(30px, 20px) scale(1.1); }
+}
+
+/* ─── Dot grid ──────────────────────────────────────────────────────────────── */
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
+}
+
+/* ─── Card ──────────────────────────────────────────────────────────────────── */
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow-lg);
+  animation: slide-up var(--duration-slow) var(--ease-out-expo) both;
+}
+
+/* ─── Logo ──────────────────────────────────────────────────────────────────── */
+.logo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.logoMark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 2.25rem;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.logoText {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.75rem;
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
+/* ─── Tagline ───────────────────────────────────────────────────────────────── */
+.tagline {
+  position: relative;
+  z-index: 1;
+  margin-top: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  animation: fade-in 600ms 400ms var(--ease-out-expo) both;
+}

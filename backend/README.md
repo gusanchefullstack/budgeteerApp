@@ -187,6 +187,7 @@ All `/budget` and `/transactions` routes require `Authorization: Bearer <token>`
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/` | Create a budget (one per user) |
+| `GET` | `/` | Get the authenticated user's budget (returns `null` if none) |
 | `GET` | `/:id` | Get budget by ID |
 | `GET` | `/:id/transactions` | Get all transactions for this budget's user |
 | `PATCH` | `/:id` | Update budget name or date range |
@@ -410,7 +411,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 - [x] Calendar-based auto-generated ItemBuckets (7 frequency types)
 - [x] Transaction recording with automatic bucket allocation
 - [x] Filtered transaction queries
-- [ ] Frontend (React or Next.js)
+- [x] Frontend (React 19 + Vite 8 + TanStack Router — see [`/frontend`](../frontend/README.md))
 - [ ] Token revocation via Redis blocklist
 - [ ] Test suite (unit + integration)
 - [ ] Budget summary / analytics endpoint

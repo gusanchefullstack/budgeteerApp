@@ -17,6 +17,7 @@ router.use(authenticate);
 const id = validate(budgetIdParamsSchema, 'params');
 
 // ─── Budget CRUD ──────────────────────────────────────────────────────────────
+router.get('/',                     budgetController.getMine);
 router.post('/',                    validate(createBudgetSchema),            budgetController.create);
 router.get('/:id',                  id,                                      budgetController.getById);
 router.get('/:id/transactions',     id,                                      budgetController.getTransactions);

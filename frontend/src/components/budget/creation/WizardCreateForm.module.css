@@ -1,0 +1,141 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-height: 340px;
+  overflow: hidden;
+}
+
+.stepContent {
+  padding: 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: slide-up var(--duration-base) var(--ease-out-expo) both;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.stepTitle {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--text-primary);
+}
+
+.stepDesc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+/* ── Section builder ── */
+.sectionBuilder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.emptySect {
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  padding: 0.5rem 0;
+}
+
+/* ── Review ── */
+.reviewGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.reviewBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.875rem 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.reviewLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.reviewValue {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.reviewMono {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.reviewTotals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.reviewTotal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.reviewTotal_income  { background: var(--income-dim);  border-color: rgba(245,166,35,0.25); }
+.reviewTotal_expense { background: var(--expense-dim); border-color: rgba(240,74,106,0.25); }
+
+.reviewTotalLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.reviewTotalAmount {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+.reviewTotal_income  .reviewTotalAmount { color: var(--income-base); }
+.reviewTotal_expense .reviewTotalAmount { color: var(--expense-base); }
+
+/* ── Navigation ── */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+  .reviewGrid, .reviewTotals { grid-template-columns: 1fr; }
+  .stepContent { padding: 1.25rem; }
+}

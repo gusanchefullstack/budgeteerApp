@@ -1,0 +1,93 @@
+.root {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0 0.5rem;
+}
+
+.stepWrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-shrink: 0;
+}
+
+/* ── States ── */
+.done .indicator {
+  background: var(--income-base);
+  border-color: var(--income-base);
+  color: #000;
+}
+
+.active .indicator {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--accent-dim);
+}
+
+.pending .indicator {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  transition:
+    background var(--duration-base) var(--ease-out-expo),
+    border-color var(--duration-base) var(--ease-out-expo),
+    box-shadow var(--duration-base) var(--ease-out-expo);
+}
+
+.labels {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.pending .label { color: var(--text-muted); }
+
+.desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Connector line ── */
+.connector {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  margin: 0 0.75rem;
+  min-width: 24px;
+  transition: background var(--duration-base) var(--ease-out-expo);
+}
+.connectorDone { background: var(--income-base); }
+
+@media (max-width: 640px) {
+  .desc  { display: none; }
+  .label { font-size: 0.7rem; }
+  .connector { min-width: 12px; margin: 0 0.375rem; }
+}
