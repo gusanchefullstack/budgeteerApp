@@ -53,7 +53,7 @@ export function useCreateTransaction() {
       api.post<ApiResponse<Transaction>>('/transactions', body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['transactions'] })
-      qc.invalidateQueries({ queryKey: ['budget'] })
+      qc.refetchQueries({ queryKey: ['budget'] })
     },
   })
 }

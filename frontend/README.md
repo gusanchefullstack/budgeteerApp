@@ -253,6 +253,21 @@ Key docs: [Tailwind CSS v4 — Installation with Vite](https://tailwindcss.com/d
 
 Key docs: [dnd-kit — Sortable](https://docs.dndkit.com/presets/sortable)
 
+### `refetchQueries` vs. `invalidateQueries` after mutations
+
+`invalidateQueries` marks a query as stale and schedules a background refetch for active observers — but "active" means the refetch may still be deferred if React Query decides the data is fresh enough or the component is not focused. `refetchQueries` triggers an immediate, unconditional refetch regardless of stale state.
+
+For mutations whose response depends on a backend side effect (like `allocateToItemBucket` incrementing a bucket's `currentAmount`), using `refetchQueries` on the budget key ensures the UI always sees fresh data, even if the server-side write and the cache invalidation race.
+
+```ts
+onSuccess: () => {
+  qc.invalidateQueries({ queryKey: ['transactions'] }) // list can background-refresh
+  qc.refetchQueries({ queryKey: ['budget'] })          // force immediate refresh
+},
+```
+
+Key docs: [TanStack Query — refetchQueries](https://tanstack.com/query/latest/docs/reference/QueryClient#queryclientrefetchqueries)
+
 ### Bucket totals vs. per-occurrence amounts
 
 The backend generates one `ItemBucket` per calendar period (e.g. 12 buckets for a monthly item in a 1-year budget). Each bucket has its own `plannedAmount`. The UI must sum `bucket.plannedAmount` across all buckets to get the true period total — **not** `item.plannedAmount`, which is only the single-occurrence amount.

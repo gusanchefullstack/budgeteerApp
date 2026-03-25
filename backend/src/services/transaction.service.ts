@@ -105,8 +105,8 @@ export async function createTransaction(userId: string, data: CreateTransactionI
     data: { userId, ...data },
   });
 
-  // Fire-and-forget allocation — does not fail the transaction creation
-  allocateToItemBucket(userId, data.txitem, data.txdatetime, data.txamount).catch(
+  // Await allocation so the budget reflects the new transaction before the response is sent
+  await allocateToItemBucket(userId, data.txitem, data.txdatetime, data.txamount).catch(
     (err) => console.error('[allocateToItemBucket]', err),
   );
 

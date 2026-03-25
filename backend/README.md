@@ -340,7 +340,7 @@ prisma/
 
 2. **ItemBuckets are auto-generated** — `utils/buckets.ts:generateBuckets()` produces one bucket per calendar period based on the item's `frequency`. They are never accepted from the client and are fully regenerated on every item or date-range change.
 
-3. **Transaction allocation** — after a transaction is created, `allocateToItemBucket()` runs as fire-and-forget. It finds the bucket whose `plannedDate` is closest to and ≤ `txdatetime` for the matching `txitem` name, then increments `currentAmount` and sets `currentDate` to `txdatetime`.
+3. **Transaction allocation** — after a transaction is created, `allocateToItemBucket()` is awaited before the response is sent. It finds the bucket whose `plannedDate` is closest to `txdatetime` for the matching `txitem` name, then increments `currentAmount` and sets `currentDate` to `txdatetime`. Allocation errors are caught and logged but do not fail the transaction creation.
 
 4. **Transactions are immutable** — no `DELETE` endpoint exists.
 
@@ -393,6 +393,12 @@ This affects any `validate(schema, 'query')` middleware call. `req.body` and `re
 ### UTC-safe date arithmetic
 
 JavaScript `Date` methods like `getMonth()` return local time, which causes bucket `plannedDate` values to drift when the server timezone differs from UTC. All bucket date arithmetic in `utils/buckets.ts` uses `Date.UTC()` and UTC getters (`getUTCFullYear()`, `getUTCMonth()`, etc.) to ensure consistent behavior regardless of server timezone.
+
+### Fire-and-forget vs. awaited side effects and frontend cache timing
+
+`allocateToItemBucket()` was originally called as fire-and-forget (`.then()` not awaited). This caused a subtle bug: the `POST /transactions` response returned before the bucket's `currentAmount` was written to the database. The frontend's React Query `invalidateQueries` immediately triggered a refetch — but that refetch raced the in-flight DB write and consistently returned stale data. The fix was to `await` the allocation inside `createTransaction` so the DB is fully updated before the response is sent.
+
+The key insight: **any side effect that the frontend will immediately refetch after a mutation must complete before the HTTP response returns**, even if that side effect is non-critical. Swallowing errors with `.catch()` is fine — but the `await` must be there.
 
 ### Singleton Prisma client with hot reload
 
