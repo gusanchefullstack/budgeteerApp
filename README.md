@@ -98,6 +98,18 @@ See [`backend/README.md`](./backend/README.md) for full request/response schemas
 
 ---
 
+## Screenshots
+
+| Login — Dark | Login — Light |
+|---|---|
+| ![Login dark](docs/screenshots/login-dark.png) | ![Login light](docs/screenshots/login-light.png) |
+
+| Dashboard — Dark | Dashboard — Light |
+|---|---|
+| ![Dashboard dark](docs/screenshots/dashboard-dark.png) | ![Dashboard light](docs/screenshots/dashboard-light.png) |
+
+---
+
 ## Frontend Features
 
 - **Auth** — register, login, JWT stored in localStorage with route guards

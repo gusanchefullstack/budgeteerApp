@@ -12,6 +12,7 @@ A personal budgeting web app built with React 19 and TanStack Router. Plan incom
 
 ## Table of Contents
 
+- [Screenshots](#screenshots)
 - [Why Budgeteer?](#why-budgeteer)
 - [Tech Stack](#tech-stack)
 - [Installation](#installation)
@@ -23,6 +24,23 @@ A personal budgeting web app built with React 19 and TanStack Router. Plan incom
 - [Roadmap](#roadmap)
 - [License](#license)
 - [Author](#author)
+
+---
+
+## Screenshots
+
+### Login page
+| Dark mode | Light mode |
+|---|---|
+| ![Login dark](../docs/screenshots/login-dark.png) | ![Login light](../docs/screenshots/login-light.png) |
+
+### Dashboard
+| Dark mode | Light mode |
+|---|---|
+| ![Dashboard dark](../docs/screenshots/dashboard-dark.png) | ![Dashboard light](../docs/screenshots/dashboard-light.png) |
+
+### Budget creation
+![Budget creation](../docs/screenshots/budget-new-dark.png)
 
 ---
 
