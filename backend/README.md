@@ -1,3 +1,5 @@
+<img src="../frontend/public/favicon.svg" width="32" height="32" alt="Budgeteer icon" style="vertical-align:middle;margin-right:8px">
+
 # Budgeteer — Backend API
 
 A personal budgeting REST API that lets users plan income and expense budgets with hierarchical categories, auto-generated time-based buckets for tracking planned vs. actual spend, and immutable transaction recording.

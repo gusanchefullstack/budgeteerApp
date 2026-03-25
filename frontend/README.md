@@ -1,3 +1,5 @@
+<img src="public/favicon.svg" width="32" height="32" alt="Budgeteer icon" style="vertical-align:middle;margin-right:8px">
+
 # Budgeteer — Frontend
 
 A personal budgeting web app built with React 19 and TanStack Router. Plan income and expenses in a hierarchical tree (categories → groups → items), track actual spend against calendar-based buckets, and record immutable transactions — all in a dark/light themeable, typography-first UI.
@@ -39,8 +41,17 @@ A personal budgeting web app built with React 19 and TanStack Router. Plan incom
 |---|---|
 | ![Dashboard dark](../docs/screenshots/dashboard-dark.png) | ![Dashboard light](../docs/screenshots/dashboard-light.png) |
 
-### Budget creation
-![Budget creation](../docs/screenshots/budget-new-dark.png)
+### Budget creation — Full Tree Builder
+
+![Full Tree Builder](../docs/screenshots/budget-tree-dark.png)
+
+### Budget creation — Step-by-Step Wizard
+
+![Step-by-Step Wizard](../docs/screenshots/budget-wizard-dark.png)
+
+### Budget creation — Quick Start
+
+![Quick Start](../docs/screenshots/budget-quick-dark.png)
 
 ---
 
