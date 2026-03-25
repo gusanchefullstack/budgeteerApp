@@ -1,6 +1,6 @@
 # Budgeteer — Frontend
 
-A personal budgeting web app built with React 19 and TanStack Router. Plan income and expenses in a hierarchical tree (categories → groups → items), track actual spend against calendar-based buckets, and record immutable transactions — all in a dark, typography-first UI.
+A personal budgeting web app built with React 19 and TanStack Router. Plan income and expenses in a hierarchical tree (categories → groups → items), track actual spend against calendar-based buckets, and record immutable transactions — all in a dark/light themeable, typography-first UI.
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -160,26 +160,35 @@ Three modes selectable via tab:
 
 ## Design System
 
-The UI uses a custom dark slate palette with amber income accents and rose expense accents, built with CSS custom properties.
+The UI uses a custom dark/light slate palette with emerald income accents and rose expense accents, built with CSS custom properties. All color tokens are defined in `src/styles/globals.css` and switch automatically when the `data-theme` attribute on `<html>` changes.
+
+**Theming**
+- Toggle button in the sidebar switches between dark and light mode
+- Preference is persisted to `localStorage` and applied via an inline script in `index.html` before React mounts (no flash of incorrect theme)
+- Default follows the OS `prefers-color-scheme` setting on first visit
 
 **Typography**
 - `Instrument Serif` — display headings
 - `DM Mono` — numeric values and monospaced data
 - `Geist` — body and UI text
 
-**CSS tokens (defined in `src/index.css`)**
+**CSS tokens (defined in `src/styles/globals.css`)**
 
 ```css
 --bg-base        /* Page background */
 --bg-surface     /* Card / panel surfaces */
 --bg-elevated    /* Hover states, nested panels */
 --bg-overlay     /* Dropdowns, modals */
---income-base    /* Amber accent */
+--income-base    /* Emerald green accent */
 --expense-base   /* Rose accent */
 --text-primary / --text-secondary / --text-muted
 --border / --border-subtle
 --radius / --radius-sm
 ```
+
+**Background**
+- App shell: subtle repeating dot-grid pattern (opacity adapts per theme)
+- Login page: supports a full-bleed photo background — place any finance-related PNG at `public/login-bg.png`
 
 ---
 
@@ -236,8 +245,8 @@ TypeScript 5.8+ supports `"erasableSyntaxOnly": true` in `tsconfig.json`. This d
 - [x] Transaction panel with filters and pagination
 - [x] Calendar-aware planned vs. actual totals (bucket aggregation)
 - [x] Profile page
+- [x] Dark / light theme toggle (system default, persists to localStorage)
 - [ ] Test suite (React Testing Library + Vitest)
-- [ ] Dark / light theme toggle
 - [ ] Multi-budget support (pending backend change)
 - [ ] Budget export to CSV / PDF
 

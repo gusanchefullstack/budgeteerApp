@@ -109,7 +109,7 @@
   border: 1px solid;
 }
 
-.reviewTotal_income  { background: var(--income-dim);  border-color: rgba(245,166,35,0.25); }
+.reviewTotal_income  { background: var(--income-dim);  border-color: rgba(43,202,123,0.25); }
 .reviewTotal_expense { background: var(--expense-dim); border-color: rgba(240,74,106,0.25); }
 
 .reviewTotalLabel {

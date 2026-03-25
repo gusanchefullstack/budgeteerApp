@@ -1,6 +1,6 @@
 # Budgeteer
 
-A full-stack personal budgeting application. Plan income and expenses in a hierarchical tree (categories → groups → items), auto-generate calendar-based tracking buckets, and record immutable transactions — all through a dark, typography-first React UI backed by a TypeScript REST API.
+A full-stack personal budgeting application. Plan income and expenses in a hierarchical tree (categories → groups → items), auto-generate calendar-based tracking buckets, and record immutable transactions — all through a dark/light themeable, typography-first React UI backed by a TypeScript REST API.
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
@@ -124,7 +124,7 @@ See [`frontend/README.md`](./frontend/README.md) for design system, component st
 - [ ] Token revocation via Redis blocklist
 - [ ] Test suite (backend unit + integration; frontend React Testing Library + Vitest)
 - [ ] Budget summary / analytics endpoint
-- [ ] Dark / light theme toggle
+- [x] Dark / light theme toggle (system default, persists to localStorage)
 - [ ] Multi-budget support
 - [ ] Budget export to CSV / PDF
 - [ ] Multi-currency support with exchange rate lookup

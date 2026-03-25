@@ -21,10 +21,10 @@
     --text-secondary: #8a96ab;
     --text-muted:     #505d73;
 
-    /* Income (amber/gold) */
-    --income-base:    #f5a623;
-    --income-dim:     rgba(245, 166, 35, 0.12);
-    --income-glow:    rgba(245, 166, 35, 0.25);
+    /* Income (emerald green) */
+    --income-base:    #2bca7b;
+    --income-dim:     rgba(43, 202, 123, 0.12);
+    --income-glow:    rgba(43, 202, 123, 0.25);
 
     /* Expense (rose) */
     --expense-base:   #f04a6a;
@@ -44,7 +44,7 @@
     --shadow-sm:      0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
     --shadow-md:      0 4px 12px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
     --shadow-lg:      0 16px 48px rgba(0,0,0,0.6), 0 6px 16px rgba(0,0,0,0.4);
-    --shadow-glow-income:  0 0 24px rgba(245,166,35,0.2);
+    --shadow-glow-income:  0 0 24px rgba(43,202,123,0.2);
     --shadow-glow-expense: 0 0 24px rgba(240,74,106,0.2);
 
     /* Typography */
@@ -85,6 +85,31 @@
     --input:          var(--bg-elevated);
     --ring:           var(--accent);
   }
+
+  html[data-theme="light"] {
+    --bg-base:        #f4f6fa;
+    --bg-surface:     #ffffff;
+    --bg-elevated:    #eef1f7;
+    --bg-overlay:     #e4e8f1;
+
+    --border:         #d1d9e6;
+    --border-subtle:  #e4eaf4;
+
+    --text-primary:   #0f1623;
+    --text-secondary: #4a5568;
+    --text-muted:     #8a96ab;
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.08);
+  }
+}
+
+/* ─── Light theme body pattern ──────────────────────────────────────────────── */
+@layer base {
+  html[data-theme="light"] body {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='1.5' fill='rgba(0,0,0,0.1)'/%3E%3C/svg%3E");
+  }
 }
 
 /* ─── Base Reset ────────────────────────────────────────────────────────────── */
@@ -104,8 +129,11 @@
 
   body {
     background-color: var(--bg-base);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Ccircle cx='12' cy='12' r='1.5' fill='rgba(255,255,255,0.1)'/%3E%3C/svg%3E");
     color: var(--text-primary);
     font-family: var(--font-body);
+    transition: background-color var(--duration-base) var(--ease-in-out),
+                color var(--duration-base) var(--ease-in-out);
     font-weight: 400;
     line-height: 1.6;
     min-height: 100dvh;

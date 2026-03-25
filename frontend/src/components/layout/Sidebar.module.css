@@ -68,6 +68,30 @@
   color: var(--accent) !important;
 }
 
+.themeBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition:
+    background var(--duration-fast) var(--ease-in-out),
+    color var(--duration-fast) var(--ease-in-out);
+}
+
+.themeBtn:hover {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
 .logoutBtn {
   display: flex;
   align-items: center;

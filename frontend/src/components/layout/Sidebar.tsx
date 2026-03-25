@@ -4,8 +4,11 @@ import {
   PlusCircle,
   User,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from './ThemeProvider'
 import { api } from '@/lib/api'
 import { queryClient } from '@/lib/queryClient'
 import styles from './Sidebar.module.css'
@@ -19,6 +22,7 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const { logout } = useAuth()
   const router = useRouter()
+  const { theme, toggle } = useTheme()
 
   async function handleLogout() {
     try { await api.post('/auth/logout') } catch { /* stateless — ignore */ }
@@ -44,6 +48,12 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
+
+      {/* Theme toggle */}
+      <button className={styles.themeBtn} onClick={toggle} aria-label="Toggle theme">
+        {theme === 'dark' ? <Sun size={17} strokeWidth={1.75} /> : <Moon size={17} strokeWidth={1.75} />}
+        <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+      </button>
 
       {/* Logout */}
       <button className={styles.logoutBtn} onClick={handleLogout}>
