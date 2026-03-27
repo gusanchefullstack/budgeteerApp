@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies (root-level, if any)
+node_modules/
+package-lock.json
+
+# Claude Code local state
+.claude/
+
+# Environment files (each sub-project has its own)
+.env
+.env.local

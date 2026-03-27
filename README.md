@@ -23,6 +23,7 @@ Each sub-project has its own full README:
 
 - [`backend/README.md`](./backend/README.md) — API reference, environment setup, architecture, learning notes
 - [`frontend/README.md`](./frontend/README.md) — Pages & features, design system, component structure, learning notes
+- [`PRD.md`](./PRD.md) — Full Product Requirements Document (features, acceptance criteria, technical and interface requirements)
 
 ---
 
@@ -149,7 +150,9 @@ See [`frontend/README.md`](./frontend/README.md) for design system, component st
 - [x] Three budget creation modes (tree builder, wizard, quick start)
 - [ ] Token revocation via Redis blocklist
 - [ ] Test suite (backend unit + integration; frontend React Testing Library + Vitest)
-- [ ] Budget summary / analytics endpoint
+- [ ] Insights page — spending analytics, planned vs. actual comparisons, best-practice recommendations
+- [ ] Projections page — forward projections until budget end date based on historical transactions
+- [ ] Reports page — export budget and transaction data to XLSX and PDF
 - [x] Dark / light theme toggle (system default, persists to localStorage)
 - [ ] Multi-budget support
 - [ ] Budget export to CSV / PDF

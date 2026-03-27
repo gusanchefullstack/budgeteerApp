@@ -1,0 +1,449 @@
+# Budgeteer — Product Requirements Document
+
+**Version:** 1.0
+**Date:** 2026-03-27
+**Status:** Active Development
+
+---
+
+## 1. Product Overview
+
+### 1.1 What Is Being Built
+
+Budgeteer is a personal budget management web application. It enables individual users to define a structured budget hierarchy (categories → groups → items → time-bucketed slots), record income and expense transactions, and track actual spending against planned amounts over a defined period.
+
+### 1.2 Who It Is For
+
+**Primary user:** An individual managing personal finances who wants to plan income and expenses ahead of time and monitor actual spending against their plan. No financial expertise is assumed.
+
+**Admin users:** Administrators with platform-level access to user and budget data. Admin functionality is deferred to a future version.
+
+### 1.3 Version 1 Scope Restrictions
+
+- One budget per user maximum.
+- Username + password is the only authentication method.
+- Mobile app not included.
+- Admin functionality not implemented.
+- Transactions are immutable once created (no delete).
+- No social or sharing features.
+
+---
+
+## 2. Features
+
+Each feature is described in behavioral terms — what the system does from the user's perspective.
+
+---
+
+### F-01: User Registration
+
+**Who:** Unauthenticated visitor.
+
+**Behavior:**
+- The user fills in first name, last name, username, and password.
+- The form requires password confirmation (entered twice); submission is blocked if they do not match.
+- Field constraints enforced client-side and server-side: first/last name ≤ 20 alphabetical characters; username ≤ 20 alphanumeric characters; password ≤ 20 characters.
+- On success, the API returns a JWT; the client stores it and redirects to the dashboard.
+- On failure (duplicate username, validation error), the form displays an inline error without clearing valid fields.
+
+**Completion criteria:**
+- A new `User` document is created in MongoDB.
+- JWT is issued and returned.
+- User is redirected to dashboard (or budget creation if no budget exists).
+- Duplicate username returns HTTP 409 with a clear message.
+
+---
+
+### F-02: User Login
+
+**Who:** Registered user.
+
+**Behavior:**
+- The user enters username and password (password masked).
+- If credentials are valid, the JWT is stored and the user is redirected to dashboard.
+- If credentials are invalid, an error message is displayed ("Invalid username or password") — no information leakage about which field is wrong.
+- A link to the registration page is visible on the login screen.
+
+**Completion criteria:**
+- Correct credentials → JWT stored, redirect to dashboard.
+- Incorrect credentials → HTTP 401, error message shown, no redirect.
+- Password is never stored or transmitted in plaintext.
+
+---
+
+### F-03: User Logout
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- The user triggers logout via a UI control.
+- The stored JWT is deleted from the client.
+- The user is redirected to the login page.
+- No server-side token invalidation is required (stateless logout).
+
+**Completion criteria:**
+- JWT removed from client storage.
+- Subsequent API calls without a new token are rejected (HTTP 401).
+- User lands on login page.
+
+---
+
+### F-04: Delete Account (Unsubscribe)
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- The user initiates account deletion from the profile page.
+- A confirmation prompt is shown before proceeding.
+- On confirmation, the API deletes the user record along with their budget and all associated transactions.
+- The client clears the JWT and redirects to the login page.
+
+**Completion criteria:**
+- `User`, `Budget`, and `Transaction` documents for that user are removed from the database.
+- Client session is terminated.
+- User lands on login page with a confirmation message.
+
+---
+
+### F-05: Create Budget
+
+**Who:** Authenticated user with no existing budget.
+
+**Behavior:**
+Three creation modes are supported, all resulting in the same data structure:
+
+**Mode A — Full Tree (one-shot):**
+The user builds the complete budget hierarchy — basic data (name, start date, end date), income categories/groups/items, and expense categories/groups/items — in a single interactive view. All data is submitted to the API in one request.
+
+**Mode B — Step-by-step wizard:**
+A guided stepper walks the user through: (1) basic data → (2) income structure → (3) expense structure. Each step validates before advancing. Uses a shadcn/ui Stepper component.
+
+**Mode C — Basic data first:**
+The user creates only the budget shell (name and dates) and fills categories/groups/items later via the CRUD features.
+
+**Common rules for all modes:**
+- Budget name ≤ 50 alphanumeric characters (spaces allowed).
+- `endingDate` must be after `beginningDate`.
+- Item frequencies restricted to: `daily`, `weekly`, `monthly`, `quarterly`, `semiannually`, `annually`, `onetime`.
+- Item planned dates must fall within the budget's date range.
+- ItemBuckets are auto-generated by the backend — not submitted by the client.
+
+**Completion criteria:**
+- Budget document created in MongoDB with the correct hierarchy.
+- ItemBuckets generated per item frequency and budget date range.
+- User is redirected to the dashboard showing the new budget.
+- Attempting to create a second budget returns HTTP 409.
+
+---
+
+### F-06: View Budget (Dashboard)
+
+**Who:** Authenticated user with an existing budget.
+
+**Behavior:**
+- The dashboard displays the full budget hierarchy: name, date range, income categories/groups/items with planned amounts and bucket progress, and expense categories/groups/items with the same.
+- Planned vs. actual (current) amounts are visible at item and bucket level.
+- The page includes a transactions panel filterable by category, group, item, date range, and type (income/expense); results are paginated.
+- If no budget exists, a prompt to create one is shown instead.
+
+**Completion criteria:**
+- All budget fields and the full category → group → item → bucket hierarchy are rendered.
+- Transactions panel loads and filters correctly.
+- Pagination works (page size consistent, page controls functional).
+
+---
+
+### F-07: Update Budget
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- The user can update the budget name and date range.
+- Changing date range triggers bucket regeneration on the backend.
+- The UI reflects the updated data immediately after a successful PATCH.
+
+**Completion criteria:**
+- PATCH `/api/v1/budget/:id` succeeds and the response reflects updated fields.
+- Buckets are regenerated when the date range changes.
+- Dashboard re-fetches and displays updated data.
+
+---
+
+### F-08: Delete Budget
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- The user triggers budget deletion from the dashboard.
+- A confirmation prompt is shown.
+- On confirmation, the budget and all associated transactions are deleted.
+- The user is redirected to the budget creation flow.
+
+**Completion criteria:**
+- Budget document and all linked transactions removed.
+- UI no longer shows the deleted budget.
+- User can create a new budget after deletion.
+
+---
+
+### F-09: Manage Budget Categories (CRUD)
+
+**Who:** Authenticated user with an existing budget.
+
+**Behavior:**
+- **Create:** Add a new category (`incomes` or `expenses`) to an existing budget.
+- **Read:** Categories are visible in the dashboard hierarchy.
+- **Update:** Rename a category; the backend updates the `txcategory` field on all associated transactions.
+- **Delete:** Remove a category; all child groups, items, buckets, and associated transactions are deleted.
+- Parent/child constraints enforced: a group cannot be created without a valid parent category.
+
+**Completion criteria:**
+- Create → category appears in budget hierarchy, buckets generated for any items.
+- Update → category name updated in budget and in all matching transactions.
+- Delete → category and entire subtree (groups, items, buckets, transactions) removed.
+
+---
+
+### F-10: Manage Budget Groups (CRUD)
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- **Create:** Add a group to an existing category.
+- **Update:** Rename a group; backend updates `txgroup` in associated transactions.
+- **Delete:** Remove group with its items, buckets, and associated transactions.
+- Only valid (already created) parent categories are selectable.
+
+**Completion criteria:**
+- Same structural requirements as F-09, scoped to group level.
+- `txgroup` field updated on transactions when group is renamed.
+
+---
+
+### F-11: Manage Budget Items (CRUD)
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- **Create:** Add an item to an existing group, specifying name, planned amount, currency, frequency, and planned date (within budget period).
+- **Update:** Modify item fields; backend regenerates buckets and updates `txitem` in transactions.
+- **Delete:** Remove item, its buckets, and its associated transactions.
+- Frequency must be one of the seven allowed values.
+- Planned date must fall within the budget's `beginningDate`–`endingDate` range.
+- Only valid parent category and group are selectable.
+
+**Completion criteria:**
+- Buckets auto-generated on create and on update.
+- `txitem` field updated in transactions when item is renamed.
+- Frequency and date validation blocks invalid submissions.
+
+---
+
+### F-12: Create Transaction
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- The user enters: date/time, amount, currency, type (income/expense), category name, group name, item name.
+- Submission calls POST `/api/v1/transactions/`.
+- The backend allocates the transaction to the closest preceding ItemBucket for the matched item.
+- `txcategory`, `txgroup`, and `txitem` must match existing budget elements.
+
+**Completion criteria:**
+- Transaction document created in MongoDB.
+- The matched ItemBucket's `currentAmount` is incremented.
+- Transaction appears in the dashboard transactions panel.
+- Attempt to delete a transaction from the UI is not possible (no delete action exposed).
+
+---
+
+### F-13: View Transactions
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- The user can browse all their transactions from the dashboard or a dedicated list.
+- Filters available: date range, type (income/expense), category, group, item.
+- Results are paginated.
+- Individual transaction detail is accessible.
+
+**Completion criteria:**
+- `GET /api/v1/transactions/` returns all transactions for the authenticated user.
+- Query filters (`GET /api/v1/transactions/q?`) work correctly for all supported parameters.
+- Pagination is functional.
+
+---
+
+### F-14: Profile Page
+
+**Who:** Authenticated user.
+
+**Behavior:**
+- Displays current user information (first name, last name, username).
+- Allows updating profile fields (first name, last name).
+- Username update behavior TBD (may be restricted).
+- Provides access to account deletion (F-04).
+
+**Completion criteria:**
+- Profile data loads correctly from the authenticated user's session.
+- Updates persist and are reflected in the UI.
+- Delete account is accessible from this page.
+
+---
+
+### F-15: Insights Page *(planned, not yet implemented)*
+
+**Behavior:** Analytics on spending behavior, comparison to plan, and recommendations based on best practices.
+
+**Completion criteria:** Deferred — out of scope for v1.
+
+---
+
+### F-16: Projections Page *(planned, not yet implemented)*
+
+**Behavior:** Forward-looking projections of income and expenses until budget end date, based on historical transaction data.
+
+**Completion criteria:** Deferred — out of scope for v1.
+
+---
+
+### F-17: Reports Page *(planned, not yet implemented)*
+
+**Behavior:** Generate and download XLSX and PDF reports of budget and transaction data.
+
+**Completion criteria:** Deferred — out of scope for v1.
+
+---
+
+## 3. Technical Requirements
+
+### 3.1 Backend
+
+| Concern | Choice |
+|---|---|
+| Runtime | Node.js (latest stable LTS) |
+| Framework | Express 5.1.0 |
+| Language | TypeScript 5.x |
+| ORM | Prisma 6.19 |
+| Database | MongoDB Atlas (cloud) |
+| Validation | Zod 4 |
+| Authentication | JWT (Bearer token, stateless) |
+| Password storage | bcrypt hash |
+| Architecture | Layered: routes → controllers → services → Prisma |
+
+**Backend layer rules:**
+- Dependency flow is strictly one-directional (routes → controllers → services → Prisma).
+- All DB access lives in services only.
+- Global error handler covers: `AppError`, Prisma P2002/P2025, and generic 500.
+- `validate()` middleware handles Zod validation per route.
+- Env vars parsed and type-checked at startup via `config/env.ts`.
+
+**API base path:** `/api/v1`
+**Secured routes:** All `/budget` and `/transactions` endpoints require `Authorization: Bearer <token>`.
+
+### 3.2 Frontend
+
+| Concern | Choice |
+|---|---|
+| Framework | React 19 |
+| Build tool | Vite 8.0 (stable) |
+| Language | TypeScript 5.x |
+| Routing | TanStack Router |
+| Server state | TanStack Query |
+| Styling | CSS Modules (no CSS-in-JS, no Tailwind) |
+| Form handling | React Hook Form + Zod |
+| Budget creation wizard | shadcn/ui Stepper |
+| Drag-and-drop hierarchy | dnd-kit |
+
+### 3.3 Database Schema Constraints
+
+- The full `Budget` hierarchy (`BudgetCategory` → `BudgetGroup` → `BudgetItem` → `ItemBucket`) is stored as **embedded composite types** inside the `Budget` document — no separate collections for these.
+- No MongoDB-level unique constraint exists for one-budget-per-user; enforced at the service layer.
+- Prisma MongoDB connector has no native enum support; enum-like fields are `String` with Zod validation.
+
+### 3.4 External Services
+
+| Service | Purpose |
+|---|---|
+| MongoDB Atlas | Hosted database |
+| None (v1) | No third-party payments, email, or analytics APIs |
+
+### 3.5 Browser Support
+
+All modern evergreen browsers: Chrome, Firefox, Safari, Edge (latest two stable releases each). No IE support. No mobile browser optimization in v1.
+
+### 3.6 Security Requirements
+
+- Passwords hashed with bcrypt before storage.
+- JWT issued on register and login; required as Bearer token on all protected routes.
+- Logout is client-side only (token deletion); no server-side session store.
+- Input validated server-side via Zod on every endpoint (not trusted from client).
+- SQL/NoSQL injection mitigated via Prisma parameterized queries.
+
+---
+
+## 4. Interface Parameters
+
+### 4.1 Visual Style
+
+- Clean, data-dense layout appropriate for a financial tool.
+- Light and dark theme support (toggle available to user).
+- Background uses a subtle geometric pattern.
+- Income figures displayed with a distinct color (e.g., green-adjacent) to differentiate from expenses.
+- No heavy illustration or decorative chrome — the data is the focus.
+
+### 4.2 Layout Decisions
+
+- **Dashboard:** Full-width view. Budget hierarchy displayed in a structured panel (left or center). Transactions panel below or alongside, collapsible or tabbed.
+- **Budget creation:** Either a full-page tree builder (Mode A), a step-by-step wizard occupying the main content area (Mode B), or a minimal form (Mode C).
+- **Auth pages (login/register):** Centered card layout, no sidebar.
+- **Profile page:** Simple form layout, centered or left-aligned.
+- **Navigation:** Persistent top or side navigation for authenticated users (Dashboard, Profile, Logout).
+
+### 4.3 Interaction Model
+
+- Forms validate on submit (and on blur for required fields).
+- Inline error messages adjacent to the relevant field — no modal alerts for validation.
+- Confirmation dialogs (modal or inline) for destructive actions (delete budget, delete account).
+- Budget hierarchy builder supports drag-and-drop nesting (dnd-kit) when using Mode A/B.
+- Transaction panel supports filter controls that apply without full page reload (TanStack Query refetch).
+- Optimistic UI updates are not required; pessimistic (wait for API response) is acceptable.
+- All async operations show a loading indicator; errors show a toast or inline error with a retry option.
+
+---
+
+## 5. Completion Criteria per Feature
+
+The table below maps each feature to its minimum-viable acceptance gate. A feature is considered **complete** when all criteria pass.
+
+| Feature | Acceptance Gate |
+|---|---|
+| F-01 Registration | New user created; JWT returned; redirect on success; duplicate blocked with 409 |
+| F-02 Login | JWT stored on success; error shown on failure; no plaintext password in transit |
+| F-03 Logout | JWT cleared; redirect to login |
+| F-04 Delete Account | User + budget + transactions deleted; session terminated |
+| F-05 Create Budget | Budget + buckets created; one-budget limit enforced; all three creation modes functional |
+| F-06 View Budget | Full hierarchy displayed; transactions panel with filters and pagination working |
+| F-07 Update Budget | PATCH succeeds; bucket regeneration fires; UI reflects change |
+| F-08 Delete Budget | Budget + transactions deleted; user can create new budget after |
+| F-09 Category CRUD | Create/update/delete with cascade; transaction fields updated on rename |
+| F-10 Group CRUD | Create/update/delete with cascade; `txgroup` updated on rename |
+| F-11 Item CRUD | Create/update/delete with cascade; buckets regenerated; `txitem` updated on rename |
+| F-12 Create Transaction | Transaction created; correct bucket allocated; no delete action exposed |
+| F-13 View Transactions | List, filter, paginate work; single transaction detail accessible |
+| F-14 Profile Page | Profile data loads; updates persist; delete account accessible |
+
+---
+
+## 6. Out of Scope for v1
+
+- Admin user role and admin dashboard.
+- Mobile application.
+- Insights / analytics page (F-15).
+- Projections page (F-16).
+- Reporting / export page (F-17).
+- OAuth or any authentication method other than username/password.
+- Multi-currency conversion.
+- Recurring transaction automation (buckets track planned amounts; actual transactions are user-entered).
+- Notifications or reminders.
+- Data import (CSV, bank feeds).

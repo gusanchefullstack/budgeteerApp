@@ -291,6 +291,9 @@ TypeScript 5.8+ supports `"erasableSyntaxOnly": true` in `tsconfig.json`. This d
 - [x] Profile page
 - [x] Dark / light theme toggle (system default, persists to localStorage)
 - [ ] Test suite (React Testing Library + Vitest)
+- [ ] Insights page — spending analytics, planned vs. actual comparisons, best-practice recommendations
+- [ ] Projections page — forward projections until budget end date based on historical transactions
+- [ ] Reports page — export budget and transaction data to XLSX and PDF
 - [ ] Multi-budget support (pending backend change)
 - [ ] Budget export to CSV / PDF
 
