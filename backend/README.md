@@ -338,7 +338,7 @@ prisma/
 
 1. **One budget per user** — enforced in `budget.service.ts` via a count check. MongoDB composite types prevent a DB-level unique constraint here.
 
-2. **ItemBuckets are auto-generated** — `utils/buckets.ts:generateBuckets()` produces one bucket per calendar period based on the item's `frequency`. They are never accepted from the client and are fully regenerated on every item or date-range change.
+2. **ItemBuckets are auto-generated** — `utils/buckets.ts:generateBuckets()` produces one bucket per calendar period based on the item's `frequency`. They are never accepted from the client and are fully regenerated on every item or date-range change. Only periods **fully contained** within the budget's date range generate a bucket — a period that extends beyond `endingDate` is excluded (e.g. a monthly item in a budget ending Apr 1 gets no April bucket, since April runs to Apr 30).
 
 3. **Transaction allocation** — after a transaction is created, `allocateToItemBucket()` is awaited before the response is sent. It finds the bucket whose `plannedDate` is closest to `txdatetime` for the matching `txitem` name, then increments `currentAmount` and sets `currentDate` to `txdatetime`. Allocation errors are caught and logged but do not fail the transaction creation.
 

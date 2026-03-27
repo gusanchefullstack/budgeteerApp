@@ -6,8 +6,8 @@ type Frequency = BudgetItem['frequency'];
  * Generates ItemBuckets for a BudgetItem based on calendar periods.
  *
  * Each bucket corresponds to one calendar period (day / Mon–Sun week / month /
- * quarter / half-year / year) that overlaps with [beginningDate, endingDate].
- * Partial first and last periods are included.
+ * quarter / half-year / year) that is fully contained within [beginningDate, endingDate].
+ * Periods that extend beyond endingDate are excluded.
  *
  * plannedDate on each bucket = the item's day pattern applied to that period
  * (e.g. monthly with item.plannedDate on the 15th → bucket for May has May 15).
@@ -82,7 +82,7 @@ function getDailyDates(beginningDate: Date, endingDate: Date): Date[] {
 }
 
 /**
- * One bucket per Mon–Sun calendar week that overlaps with [beginningDate, endingDate].
+ * One bucket per Mon–Sun calendar week fully contained in [beginningDate, endingDate].
  * plannedDate = the same weekday as item.plannedDate within each week.
  */
 function getWeeklyDates(itemDate: Date, beginningDate: Date, endingDate: Date): Date[] {
@@ -98,7 +98,8 @@ function getWeeklyDates(itemDate: Date, beginningDate: Date, endingDate: Date): 
     beginningDate.getUTCDate() - beginDow,
   ));
 
-  while (monday <= endingDate) {
+  // Include week only if its Sunday (monday + 6 days) is within the budget
+  while (monday.getTime() + 6 * 86400000 <= endingDate.getTime()) {
     const bucketDate = new Date(monday);
     bucketDate.setUTCDate(bucketDate.getUTCDate() + itemDow);
     dates.push(bucketDate);
@@ -108,7 +109,7 @@ function getWeeklyDates(itemDate: Date, beginningDate: Date, endingDate: Date): 
 }
 
 /**
- * One bucket per calendar month that overlaps with [beginningDate, endingDate].
+ * One bucket per calendar month fully contained in [beginningDate, endingDate].
  * plannedDate = item's day-of-month in each month (capped to last day of month).
  */
 function getMonthlyDates(itemDate: Date, beginningDate: Date, endingDate: Date): Date[] {
@@ -118,7 +119,8 @@ function getMonthlyDates(itemDate: Date, beginningDate: Date, endingDate: Date):
   let year  = beginningDate.getUTCFullYear();
   let month = beginningDate.getUTCMonth();
 
-  while (utcDate(year, month, 1) <= endingDate) {
+  // Include month only if its last day is within the budget
+  while (new Date(Date.UTC(year, month + 1, 0)) <= endingDate) {
     dates.push(utcDate(year, month, day));
     if (++month > 11) { month = 0; year++; }
   }
@@ -138,7 +140,8 @@ function getQuarterlyDates(itemDate: Date, beginningDate: Date, endingDate: Date
   let year         = beginningDate.getUTCFullYear();
   let quarterStart = Math.floor(beginningDate.getUTCMonth() / 3) * 3; // 0 | 3 | 6 | 9
 
-  while (utcDate(year, quarterStart, 1) <= endingDate) {
+  // Include quarter only if its last day is within the budget
+  while (new Date(Date.UTC(year, quarterStart + 3, 0)) <= endingDate) {
     dates.push(utcDate(year, quarterStart + monthOffsetInPeriod, day));
     quarterStart += 3;
     if (quarterStart > 11) { quarterStart = 0; year++; }
@@ -159,7 +162,8 @@ function getSemiannualDates(itemDate: Date, beginningDate: Date, endingDate: Dat
   let year      = beginningDate.getUTCFullYear();
   let halfStart = Math.floor(beginningDate.getUTCMonth() / 6) * 6; // 0 | 6
 
-  while (utcDate(year, halfStart, 1) <= endingDate) {
+  // Include half-year only if its last day is within the budget
+  while (new Date(Date.UTC(year, halfStart + 6, 0)) <= endingDate) {
     dates.push(utcDate(year, halfStart + monthOffsetInPeriod, day));
     halfStart += 6;
     if (halfStart > 11) { halfStart = 0; year++; }
@@ -178,7 +182,8 @@ function getAnnualDates(itemDate: Date, beginningDate: Date, endingDate: Date): 
 
   let year = beginningDate.getUTCFullYear();
 
-  while (utcDate(year, 0, 1) <= endingDate) {
+  // Include year only if its last day (Dec 31) is within the budget
+  while (utcDate(year, 11, 31) <= endingDate) {
     dates.push(utcDate(year, month, day));
     year++;
   }
