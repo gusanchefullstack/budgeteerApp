@@ -38,6 +38,56 @@ function applyBuckets(
   }));
 }
 
+// Minimal structural type satisfied by both Prisma's BudgetCategory[] and Zod-inferred input arrays.
+type NameTree = Array<{
+  name: string;
+  budgetGroups: Array<{
+    name: string;
+    budgetItems: Array<{ name: string }>;
+  }>;
+}>;
+
+/** All category names across both sections. */
+function allCategoryNames(budget: Budget): string[] {
+  return [...budget.incomes, ...budget.expenses].map((c) => c.name);
+}
+
+/** All group names across the entire budget (both sections). */
+function allGroupNames(budget: Budget): string[] {
+  return [...budget.incomes, ...budget.expenses].flatMap((c) =>
+    c.budgetGroups.map((g) => g.name),
+  );
+}
+
+/** All item names across the entire budget (both sections). */
+function allItemNames(budget: Budget): string[] {
+  return [...budget.incomes, ...budget.expenses].flatMap((c) =>
+    c.budgetGroups.flatMap((g) => g.budgetItems.map((i) => i.name)),
+  );
+}
+
+/**
+ * Assert that category, group, and item names are globally unique within a
+ * combined incomes+expenses structure. Used on create and full-replace updates.
+ */
+function assertNamesUnique(incomes: NameTree, expenses: NameTree): void {
+  const allCats = [...incomes, ...expenses];
+
+  const catNames = allCats.map((c) => c.name);
+  const dupCat = catNames.find((n, i) => catNames.indexOf(n) !== i);
+  if (dupCat) throw new AppError(409, `Duplicate category name "${dupCat}"`);
+
+  const grpNames = allCats.flatMap((c) => c.budgetGroups.map((g) => g.name));
+  const dupGrp = grpNames.find((n, i) => grpNames.indexOf(n) !== i);
+  if (dupGrp) throw new AppError(409, `Duplicate group name "${dupGrp}"`);
+
+  const itemNames = allCats.flatMap((c) =>
+    c.budgetGroups.flatMap((g) => g.budgetItems.map((i) => i.name)),
+  );
+  const dupItem = itemNames.find((n, i) => itemNames.indexOf(n) !== i);
+  if (dupItem) throw new AppError(409, `Duplicate item name "${dupItem}"`);
+}
+
 // ─── Service functions ───────────────────────────────────────────────────────
 
 export async function createBudget(userId: string, data: CreateBudgetInput) {
@@ -45,6 +95,8 @@ export async function createBudget(userId: string, data: CreateBudgetInput) {
   if (count > 0) {
     throw new AppError(409, 'Only one budget is allowed per user');
   }
+
+  assertNamesUnique(data.incomes, data.expenses);
 
   const beginningDate = data.beginningDate;
   const endingDate    = data.endingDate;
@@ -82,6 +134,11 @@ export async function updateBudget(budgetId: string, userId: string, data: Updat
 
   const beginningDate = data.beginningDate ?? existing.beginningDate;
   const endingDate    = data.endingDate    ?? existing.endingDate;
+
+  // Validate global name uniqueness across the effective combined structure
+  const effectiveIncomes  = (data.incomes  ?? existing.incomes)  as NameTree;
+  const effectiveExpenses = (data.expenses ?? existing.expenses) as NameTree;
+  assertNamesUnique(effectiveIncomes, effectiveExpenses);
 
   // Re-generate buckets if date range or items changed
   const incomes  = data.incomes  ? applyBuckets(data.incomes,  beginningDate, endingDate) : undefined;
@@ -171,8 +228,24 @@ export async function addCategory(budgetId: string, userId: string, data: Create
   const budget = await getBudgetById(budgetId, userId);
   const categories = getCategories(budget, data.section);
 
-  if (categories.some((c) => c.name === data.name)) {
+  if (allCategoryNames(budget).includes(data.name)) {
     throw new AppError(409, `Category "${data.name}" already exists`);
+  }
+
+  const existingGroupNames = allGroupNames(budget);
+  for (const grp of data.budgetGroups) {
+    if (existingGroupNames.includes(grp.name)) {
+      throw new AppError(409, `Group "${grp.name}" already exists`);
+    }
+  }
+
+  const existingItemNames = allItemNames(budget);
+  for (const grp of data.budgetGroups) {
+    for (const item of grp.budgetItems) {
+      if (existingItemNames.includes(item.name)) {
+        throw new AppError(409, `Item "${item.name}" already exists`);
+      }
+    }
   }
 
   const newCategory: BudgetCategory = {
@@ -202,13 +275,22 @@ export async function updateCategory(budgetId: string, userId: string, data: Upd
   const { categories, catIdx } = locateCategory(budget, data.section, data.categoryName);
 
   if (data.name && data.name !== data.categoryName) {
-    if (categories.some((c) => c.name === data.name)) {
+    if (allCategoryNames(budget).filter((n) => n !== data.categoryName).includes(data.name)) {
       throw new AppError(409, `Category "${data.name}" already exists`);
     }
     categories[catIdx].name = data.name;
   }
 
-  return saveSection(budgetId, data.section, categories);
+  const result = await saveSection(budgetId, data.section, categories);
+
+  if (data.name && data.name !== data.categoryName) {
+    await prisma.transaction.updateMany({
+      where: { userId, txcategory: data.categoryName },
+      data:  { txcategory: data.name },
+    });
+  }
+
+  return result;
 }
 
 export async function deleteCategory(budgetId: string, userId: string, data: DeleteCategoryInput) {
@@ -231,8 +313,15 @@ export async function addGroup(budgetId: string, userId: string, data: CreateGro
   const budget = await getBudgetById(budgetId, userId);
   const { categories, catIdx } = locateCategory(budget, data.section, data.categoryName);
 
-  if (categories[catIdx].budgetGroups.some((g) => g.name === data.name)) {
-    throw new AppError(409, `Group "${data.name}" already exists in category "${data.categoryName}"`);
+  if (allGroupNames(budget).includes(data.name)) {
+    throw new AppError(409, `Group "${data.name}" already exists`);
+  }
+
+  const existingItemNames = allItemNames(budget);
+  for (const item of data.budgetItems) {
+    if (existingItemNames.includes(item.name)) {
+      throw new AppError(409, `Item "${item.name}" already exists`);
+    }
   }
 
   const newGroup: BudgetGroup = {
@@ -260,13 +349,22 @@ export async function updateGroup(budgetId: string, userId: string, data: Update
   );
 
   if (data.name && data.name !== data.groupName) {
-    if (categories[catIdx].budgetGroups.some((g) => g.name === data.name)) {
-      throw new AppError(409, `Group "${data.name}" already exists in category "${data.categoryName}"`);
+    if (allGroupNames(budget).filter((n) => n !== data.groupName).includes(data.name)) {
+      throw new AppError(409, `Group "${data.name}" already exists`);
     }
     categories[catIdx].budgetGroups[grpIdx].name = data.name;
   }
 
-  return saveSection(budgetId, data.section, categories);
+  const result = await saveSection(budgetId, data.section, categories);
+
+  if (data.name && data.name !== data.groupName) {
+    await prisma.transaction.updateMany({
+      where: { userId, txgroup: data.groupName },
+      data:  { txgroup: data.name },
+    });
+  }
+
+  return result;
 }
 
 export async function deleteGroup(budgetId: string, userId: string, data: DeleteGroupInput) {
@@ -293,8 +391,8 @@ export async function addItem(budgetId: string, userId: string, data: CreateItem
     budget, data.section, data.categoryName, data.groupName,
   );
 
-  if (categories[catIdx].budgetGroups[grpIdx].budgetItems.some((i) => i.name === data.name)) {
-    throw new AppError(409, `Item "${data.name}" already exists in group "${data.groupName}"`);
+  if (allItemNames(budget).includes(data.name)) {
+    throw new AppError(409, `Item "${data.name}" already exists`);
   }
 
   const newItem: BudgetItem = {
@@ -324,8 +422,8 @@ export async function updateItem(budgetId: string, userId: string, data: UpdateI
   const item = categories[catIdx].budgetGroups[grpIdx].budgetItems[itemIdx];
 
   if (data.name && data.name !== data.itemName) {
-    if (categories[catIdx].budgetGroups[grpIdx].budgetItems.some((i) => i.name === data.name)) {
-      throw new AppError(409, `Item "${data.name}" already exists in group "${data.groupName}"`);
+    if (allItemNames(budget).filter((n) => n !== data.itemName).includes(data.name)) {
+      throw new AppError(409, `Item "${data.name}" already exists`);
     }
     item.name = data.name;
   }
@@ -351,7 +449,16 @@ export async function updateItem(budgetId: string, userId: string, data: UpdateI
     ) as ItemBucket[];
   }
 
-  return saveSection(budgetId, data.section, categories);
+  const result = await saveSection(budgetId, data.section, categories);
+
+  if (data.name && data.name !== data.itemName) {
+    await prisma.transaction.updateMany({
+      where: { userId, txitem: data.itemName },
+      data:  { txitem: data.name },
+    });
+  }
+
+  return result;
 }
 
 export async function deleteItem(budgetId: string, userId: string, data: DeleteItemInput) {

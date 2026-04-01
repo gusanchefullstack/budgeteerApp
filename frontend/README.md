@@ -17,6 +17,7 @@ A personal budgeting web app built with React 19 and TanStack Router. Plan incom
 - [Screenshots](#screenshots)
 - [Why Budgeteer?](#why-budgeteer)
 - [Tech Stack](#tech-stack)
+- [Backend API & OpenAPI](#backend-api--openapi)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Project Structure](#project-structure)
@@ -75,6 +76,17 @@ Most budgeting UIs are either spreadsheet-like grids or opinionated SaaS product
 | Drag & drop | dnd-kit |
 | Icons | Lucide React |
 | HTTP | Fetch API (thin wrapper with JWT injection) |
+
+---
+
+## Backend API & OpenAPI
+
+The UI talks to the REST API under `/api/v1` (proxied to the backend in dev). Full schemas, request bodies, and response envelopes are documented as **OpenAPI 3**:
+
+- **Interactive docs** (backend running): `http://localhost:3000/api/v1/docs/`
+- **Spec file** in the monorepo: [`../backend/docs/openapi.yaml`](../backend/docs/openapi.yaml)
+
+Stack and product notes for this app also live under [`specs/`](./specs/) (for example [`specs/01.Stack.md`](./specs/01.Stack.md)).
 
 ---
 

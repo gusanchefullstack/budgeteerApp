@@ -19,6 +19,7 @@ A personal budgeting REST API that lets users plan income and expense budgets wi
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Environment Variables](#environment-variables)
+- [OpenAPI](#openapi)
 - [API Reference](#api-reference)
 - [Project Structure](#project-structure)
 - [Key Domain Rules](#key-domain-rules)
@@ -62,7 +63,7 @@ Most budgeting tools are either too simple (just income vs. expenses) or too com
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/budgeteerApp.git
+git clone https://github.com/gusanchefullstack/budgeteerApp.git
 cd budgeteerApp/backend
 
 # 2. Install dependencies
@@ -97,7 +98,11 @@ curl -X POST http://localhost:3000/api/v1/auth/register \
 ```
 
 ```json
-{ "success": true, "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": { "id": "...", "firstName": "Jane", "lastName": "Doe", "username": "janedoe" }
+}
 ```
 
 ### Create a budget
@@ -147,6 +152,19 @@ Copy `.env.example` to `.env` and fill in the values below.
 
 ---
 
+## OpenAPI
+
+Full **OpenAPI 3.0** documentation is shipped with the server (static files under `docs/`).
+
+| Resource | URL (local dev, default port) |
+|----------|-------------------------------|
+| **Swagger UI** | `http://localhost:3000/api/v1/docs/` |
+| **Spec (YAML)** | `http://localhost:3000/api/v1/docs/openapi.yaml` |
+
+Source file in the repo: [`docs/openapi.yaml`](./docs/openapi.yaml). Use it for code generation, Postman import, or contract tests.
+
+---
+
 ## API Reference
 
 **Base URL:** `/api/v1`
@@ -161,6 +179,7 @@ All `/budget` and `/transactions` routes require `Authorization: Bearer <token>`
 |--------|------|------|-------------|
 | `POST` | `/register` | ❌ | Create a new user account |
 | `POST` | `/login` | ❌ | Authenticate and receive a JWT |
+| `GET` | `/me` | ✅ | Return the authenticated user's public profile |
 | `POST` | `/logout` | ✅ | Stateless no-op (client discards token) |
 | `POST` | `/unsubscribe` | ✅ | Permanently delete the authenticated account |
 
@@ -308,6 +327,9 @@ All errors follow a consistent JSON shape:
 ## Project Structure
 
 ```
+docs/
+├── openapi.yaml         # OpenAPI 3 spec (served at /api/v1/docs/openapi.yaml)
+└── index.html           # Swagger UI (CDN) — /api/v1/docs/
 src/
 ├── config/
 │   └── env.ts           # Zod-parsed env vars — fails fast at startup
@@ -338,13 +360,15 @@ prisma/
 
 1. **One budget per user** — enforced in `budget.service.ts` via a count check. MongoDB composite types prevent a DB-level unique constraint here.
 
-2. **ItemBuckets are auto-generated** — `utils/buckets.ts:generateBuckets()` produces one bucket per calendar period based on the item's `frequency`. They are never accepted from the client and are fully regenerated on every item or date-range change. Only periods **fully contained** within the budget's date range generate a bucket — a period that extends beyond `endingDate` is excluded (e.g. a monthly item in a budget ending Apr 1 gets no April bucket, since April runs to Apr 30).
+2. **Globally unique names** — category, group, and item names must be unique across the **entire** budget (both `incomes` and `expenses`). Duplicates are rejected with `409` on create and when updating the nested structure.
 
-3. **Transaction allocation** — after a transaction is created, `allocateToItemBucket()` is awaited before the response is sent. It finds the bucket whose `plannedDate` is closest to `txdatetime` for the matching `txitem` name, then increments `currentAmount` and sets `currentDate` to `txdatetime`. Allocation errors are caught and logged but do not fail the transaction creation.
+3. **ItemBuckets are auto-generated** — `utils/buckets.ts:generateBuckets()` produces one bucket per calendar period based on the item's `frequency`. They are never accepted from the client and are fully regenerated on every item or date-range change. Only periods **fully contained** within the budget's date range generate a bucket — a period that extends beyond `endingDate` is excluded (e.g. a monthly item in a budget ending Apr 1 gets no April bucket, since April runs to Apr 30).
 
-4. **Transactions are immutable** — no `DELETE` endpoint exists.
+4. **Transaction allocation** — after a transaction is created, `allocateToItemBucket()` is awaited before the response is sent. It finds the bucket whose `plannedDate` is closest to `txdatetime` for the matching `txitem` name, then increments `currentAmount` and sets `currentDate` to `txdatetime`. Allocation errors are caught and logged but do not fail the transaction creation.
 
-5. **Stateless JWT logout** — the `/logout` endpoint is a no-op; the client discards the token.
+5. **Transactions are immutable** — no `DELETE` endpoint exists.
+
+6. **Stateless JWT logout** — the `/logout` endpoint is a no-op; the client discards the token.
 
 ---
 

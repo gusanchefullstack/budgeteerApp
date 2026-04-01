@@ -1,0 +1,1639 @@
+openapi: 3.0.3
+info:
+  title: Budgeteer API
+  description: |
+    REST API for the Budgeteer personal budget tracker. All business routes live under `/api/v1`.
+
+    **Auth:** Send `Authorization: Bearer <JWT>` for protected routes (all `/budget` and `/transactions` routes, plus selected `/auth` routes).
+
+    **Envelope:** Successful JSON responses include `"success": true` plus `data`, `message`, and/or auth fields. Errors use `"success": false` with `message` and optional `details` (e.g. Zod `flatten()` on validation failures).
+
+    **Dates:** Request bodies accept ISO 8601 date-time strings where Zod `coerce.date()` is used. Query parameters for dates use the same format.
+
+    **Embedded model:** Budget categories, groups, items, and item buckets are stored embedded in the Budget document (MongoDB via Prisma). Item buckets are server-generated and are not accepted from clients on create/update of items.
+  version: 1.0.0
+  license:
+    name: ISC
+
+servers:
+  - url: http://localhost:3000
+    description: Local (default PORT from env; override if needed)
+  - url: '{baseUrl}'
+    description: Custom base URL
+    variables:
+      baseUrl:
+        default: http://localhost:3000
+
+tags:
+  - name: Authentication
+    description: Register, login, session, and account lifecycle
+  - name: Budget
+    description: Single budget per user; nested categories, groups, and items
+  - name: Transactions
+    description: Immutable transaction records; optional filtering
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by `POST /api/v1/auth/login` or `POST /api/v1/auth/register`
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        details:
+          description: Present for validation errors (Zod flatten shape)
+        code:
+          type: string
+          description: Prisma error code for some database errors
+
+    PublicUser:
+      type: object
+      required: [id, firstName, lastName, username]
+      properties:
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        firstName:
+          type: string
+          maxLength: 20
+        lastName:
+          type: string
+          maxLength: 20
+        username:
+          type: string
+          maxLength: 20
+
+    AuthSuccess:
+      type: object
+      required: [success, token, user]
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/PublicUser'
+
+    ItemBucket:
+      type: object
+      required: [plannedDate, currentDate, plannedAmount, currentAmount, currency]
+      properties:
+        plannedDate:
+          type: string
+          format: date-time
+        currentDate:
+          type: string
+          format: date-time
+        plannedAmount:
+          type: number
+        currentAmount:
+          type: number
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 code
+
+    BudgetItem:
+      type: object
+      required: [name, plannedDate, plannedAmount, type, currency, frequency, buckets]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        plannedDate:
+          type: string
+          format: date-time
+        plannedAmount:
+          type: number
+          exclusiveMinimum: 0
+        type:
+          type: string
+          enum: [income, expense]
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly, quarterly, semiannually, annually, onetime]
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemBucket'
+
+    BudgetGroup:
+      type: object
+      required: [name, type, budgetItems]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        type:
+          type: string
+          enum: [incomes, expenses]
+        budgetItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetItem'
+
+    BudgetCategory:
+      type: object
+      required: [name, type, budgetGroups]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        type:
+          type: string
+          enum: [incomes, expenses]
+        budgetGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetGroup'
+
+    Budget:
+      type: object
+      required: [id, name, userId, beginningDate, endingDate, incomes, expenses, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        name:
+          type: string
+        userId:
+          type: string
+        beginningDate:
+          type: string
+          format: date-time
+        endingDate:
+          type: string
+          format: date-time
+        incomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCategory'
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCategory'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      required:
+        [id, userId, txdatetime, txcurrency, txamount, txtype, txcategory, txgroup, txitem, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        txdatetime:
+          type: string
+          format: date-time
+        txcurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        txamount:
+          type: number
+          exclusiveMinimum: 0
+        txtype:
+          type: string
+          enum: [income, expense]
+        txcategory:
+          type: string
+          maxLength: 50
+        txgroup:
+          type: string
+          maxLength: 50
+        txitem:
+          type: string
+          maxLength: 50
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      required: [firstName, lastName, username, password]
+      properties:
+        firstName:
+          type: string
+          pattern: '^[a-zA-Z]{1,20}$'
+        lastName:
+          type: string
+          pattern: '^[a-zA-Z]{1,20}$'
+        username:
+          type: string
+          pattern: '^[a-zA-Z0-9]{1,20}$'
+        password:
+          type: string
+          minLength: 8
+          maxLength: 64
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+
+    BudgetItemInput:
+      type: object
+      required: [name, plannedDate, plannedAmount, type, currency, frequency]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        plannedDate:
+          type: string
+          format: date-time
+        plannedAmount:
+          type: number
+          exclusiveMinimum: 0
+        type:
+          type: string
+          enum: [income, expense]
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly, quarterly, semiannually, annually, onetime]
+
+    BudgetGroupInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        type:
+          type: string
+          enum: [incomes, expenses]
+        budgetItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetItemInput'
+          default: []
+
+    BudgetCategoryInput:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          maxLength: 20
+        type:
+          type: string
+          enum: [incomes, expenses]
+        budgetGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetGroupInput'
+          default: []
+
+    CreateBudgetRequest:
+      type: object
+      required: [name, beginningDate, endingDate]
+      properties:
+        name:
+          type: string
+          pattern: '^[a-zA-Z0-9 ]{1,50}$'
+        beginningDate:
+          type: string
+          format: date-time
+        endingDate:
+          type: string
+          format: date-time
+          description: Must be strictly after beginningDate
+        incomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCategoryInput'
+          default: []
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCategoryInput'
+          default: []
+
+    UpdateBudgetRequest:
+      type: object
+      description: Partial update; same field shapes as create where present
+      properties:
+        name:
+          type: string
+          pattern: '^[a-zA-Z0-9 ]{1,50}$'
+        beginningDate:
+          type: string
+          format: date-time
+        endingDate:
+          type: string
+          format: date-time
+        incomes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCategoryInput'
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetCategoryInput'
+
+    Section:
+      type: string
+      enum: [incomes, expenses]
+
+    CreateCategoryRequest:
+      type: object
+      required: [section, name]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        budgetGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetGroupInput'
+          default: []
+
+    UpdateCategoryRequest:
+      type: object
+      required: [section, categoryName]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Current name (locator)
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: New name
+
+    DeleteCategoryRequest:
+      type: object
+      required: [section, categoryName]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+
+    CreateGroupRequest:
+      type: object
+      required: [section, categoryName, name]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        budgetItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BudgetItemInput'
+          default: []
+
+    UpdateGroupRequest:
+      type: object
+      required: [section, categoryName, groupName]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        groupName:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Current name (locator)
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+
+    DeleteGroupRequest:
+      type: object
+      required: [section, categoryName, groupName]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        groupName:
+          type: string
+          minLength: 1
+          maxLength: 20
+
+    CreateItemRequest:
+      type: object
+      required: [section, categoryName, groupName, name, plannedDate, plannedAmount, itemType, currency, frequency]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        groupName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        plannedDate:
+          type: string
+          format: date-time
+        plannedAmount:
+          type: number
+          exclusiveMinimum: 0
+        itemType:
+          type: string
+          enum: [income, expense]
+          description: Item line type (distinct from section `incomes`/`expenses`)
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly, quarterly, semiannually, annually, onetime]
+
+    UpdateItemRequest:
+      type: object
+      required: [section, categoryName, groupName, itemName]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        groupName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        itemName:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Current name (locator)
+        name:
+          type: string
+          minLength: 1
+          maxLength: 20
+        plannedDate:
+          type: string
+          format: date-time
+        plannedAmount:
+          type: number
+          exclusiveMinimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        frequency:
+          type: string
+          enum: [daily, weekly, monthly, quarterly, semiannually, annually, onetime]
+
+    DeleteItemRequest:
+      type: object
+      required: [section, categoryName, groupName, itemName]
+      properties:
+        section:
+          $ref: '#/components/schemas/Section'
+        categoryName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        groupName:
+          type: string
+          minLength: 1
+          maxLength: 20
+        itemName:
+          type: string
+          minLength: 1
+          maxLength: 20
+
+    CreateTransactionRequest:
+      type: object
+      required: [txdatetime, txcurrency, txamount, txtype, txcategory, txgroup, txitem]
+      properties:
+        txdatetime:
+          type: string
+          format: date-time
+        txcurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        txamount:
+          type: number
+          exclusiveMinimum: 0
+        txtype:
+          type: string
+          enum: [income, expense]
+        txcategory:
+          type: string
+          minLength: 1
+          maxLength: 50
+        txgroup:
+          type: string
+          minLength: 1
+          maxLength: 50
+        txitem:
+          type: string
+          minLength: 1
+          maxLength: 50
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      operationId: authRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Created; returns JWT and public user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Username already taken (or unique constraint)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccess'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout (stateless JWT — client discards token)
+      operationId: authLogout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logged out successfully
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/unsubscribe:
+    post:
+      tags: [Authentication]
+      summary: Delete the authenticated account (cascades budgets and transactions)
+      operationId: authUnsubscribe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Account deleted
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Current user profile
+      operationId: authMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/PublicUser'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/budget:
+    get:
+      tags: [Budget]
+      summary: Get the current user's budget (at most one)
+      operationId: budgetGetMine
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK; `data` is null if the user has no budget yet
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    nullable: true
+                    allOf:
+                      - $ref: '#/components/schemas/Budget'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Budget]
+      summary: Create a budget (only one budget per user allowed)
+      operationId: budgetCreate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBudgetRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already has a budget or duplicate nested names
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/budget/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 24
+          maxLength: 24
+          description: MongoDB ObjectId
+    get:
+      tags: [Budget]
+      summary: Get budget by id (must belong to the user)
+      operationId: budgetGetById
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Budget]
+      summary: Update budget (partial); buckets regenerated when structure or range changes
+      operationId: budgetUpdate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBudgetRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate nested names
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Budget]
+      summary: Delete budget
+      operationId: budgetDelete
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Budget deleted
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/budget/{id}/transactions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 24
+          maxLength: 24
+    get:
+      tags: [Budget]
+      summary: List all transactions for the user (same as global list; scoped by user in service)
+      description: Returns transactions linked to the authenticated user. The budget id must exist and belong to the user.
+      operationId: budgetGetTransactions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/budget/{id}/category:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 24
+          maxLength: 24
+    post:
+      tags: [Budget]
+      summary: Add category
+      operationId: budgetAddCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate category name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Budget]
+      summary: Rename category
+      operationId: budgetUpdateCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget or category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Budget]
+      summary: Delete category
+      operationId: budgetDeleteCategory
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteCategoryRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Category deleted
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget or category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/budget/{id}/group:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 24
+          maxLength: 24
+    post:
+      tags: [Budget]
+      summary: Add group under a category
+      operationId: budgetAddGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGroupRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget or category not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate group name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Budget]
+      summary: Rename group
+      operationId: budgetUpdateGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGroupRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget, category, or group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Budget]
+      summary: Delete group
+      operationId: budgetDeleteGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteGroupRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Group deleted
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget, category, or group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/budget/{id}/item:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 24
+          maxLength: 24
+    post:
+      tags: [Budget]
+      summary: Add budget item
+      operationId: budgetAddItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget, category, or group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate item name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Budget]
+      summary: Update budget item
+      operationId: budgetUpdateItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Budget'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget or nested entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate item name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags: [Budget]
+      summary: Delete budget item
+      operationId: budgetDeleteItem
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteItemRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, message]
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Item deleted
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Budget or nested entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/transactions:
+    get:
+      tags: [Transactions]
+      summary: List all transactions for the user
+      operationId: transactionsGetAll
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags: [Transactions]
+      summary: Create transaction (allocation to item buckets runs asynchronously)
+      operationId: transactionsCreate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/transactions/q:
+    get:
+      tags: [Transactions]
+      summary: Filtered list (query parameters)
+      operationId: transactionsGetFiltered
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Must be >= startDate when both are set
+        - name: txtype
+          in: query
+          schema:
+            type: string
+            enum: [income, expense]
+        - name: txcategory
+          in: query
+          schema:
+            type: string
+        - name: txgroup
+          in: query
+          schema:
+            type: string
+        - name: txitem
+          in: query
+          schema:
+            type: string
+        - name: txcurrency
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Validation failed (including invalid date range)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/transactions/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 24
+          maxLength: 24
+    get:
+      tags: [Transactions]
+      summary: Get transaction by id
+      operationId: transactionsGetById
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

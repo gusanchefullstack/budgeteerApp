@@ -9,6 +9,21 @@ A full-stack personal budgeting application. Plan income and expenses in a hiera
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 
+## Table of Contents
+
+- [Repository Structure](#repository-structure)
+- [What Is Budgeteer?](#what-is-budgeteer)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [API Documentation (OpenAPI)](#api-documentation-openapi)
+- [API Overview](#api-overview)
+- [Screenshots](#screenshots)
+- [Frontend Features](#frontend-features)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Author](#author)
+
 ---
 
 ## Repository Structure
@@ -82,6 +97,19 @@ The Vite dev server proxies all `/api` requests to `http://localhost:3000` — n
 
 ---
 
+## API Documentation (OpenAPI)
+
+With the backend running, interactive docs and the machine-readable spec are served alongside the API:
+
+| Resource | URL |
+|----------|-----|
+| **Swagger UI** | `http://localhost:3000/api/v1/docs/` |
+| **OpenAPI 3 YAML** | `http://localhost:3000/api/v1/docs/openapi.yaml` |
+
+The same specification file lives in the repo at [`backend/docs/openapi.yaml`](./backend/docs/openapi.yaml). Replace the host/port when you deploy.
+
+---
+
 ## API Overview
 
 Base URL: `http://localhost:3000/api/v1`
@@ -90,14 +118,14 @@ All `/budget` and `/transactions` routes require `Authorization: Bearer <token>`
 
 | Resource | Endpoints |
 |----------|-----------|
-| Auth | `POST /auth/register` · `/login` · `/logout` · `/unsubscribe` |
-| Budget | `POST /budget` · `GET /budget` · `GET/PATCH/DELETE /budget/:id` |
+| Auth | `POST /auth/register` · `POST /auth/login` · `GET /auth/me` · `POST /auth/logout` · `POST /auth/unsubscribe` |
+| Budget | `POST /budget` · `GET /budget` · `GET/PATCH/DELETE /budget/:id` · `GET /budget/:id/transactions` |
 | Categories | `POST/PATCH/DELETE /budget/:id/category` |
 | Groups | `POST/PATCH/DELETE /budget/:id/group` |
 | Items | `POST/PATCH/DELETE /budget/:id/item` |
 | Transactions | `POST /transactions` · `GET /transactions` · `GET /transactions/q` · `GET /transactions/:id` |
 
-See [`backend/README.md`](./backend/README.md) for full request/response schemas.
+See [`backend/README.md`](./backend/README.md) for narrative API reference, examples, and domain rules. For schemas and try-it-out requests, use the [OpenAPI docs](#api-documentation-openapi) above.
 
 ---
 
