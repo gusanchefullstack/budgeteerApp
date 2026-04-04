@@ -163,6 +163,8 @@ Full **OpenAPI 3.0** documentation is shipped with the server (static files unde
 
 Source file in the repo: [`docs/openapi.yaml`](./docs/openapi.yaml). Use it for code generation, Postman import, or contract tests.
 
+A ready-made **Postman Collection v2.1** (variables, Bearer auth, example bodies, and test scripts) lives at [`../postman/Budgeteer-API-v2.postman_collection.json`](../postman/Budgeteer-API-v2.postman_collection.json). See [`../postman/README.md`](../postman/README.md) for import and regeneration steps.
+
 ---
 
 ## API Reference

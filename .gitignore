@@ -12,3 +12,6 @@ package-lock.json
 # Environment files (each sub-project has its own)
 .env
 .env.local
+
+# Postman — generated API put payload (run `node postman/attach-ids.mjs`)
+postman/postman-put-payload.json

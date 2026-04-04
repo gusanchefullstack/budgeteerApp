@@ -108,6 +108,8 @@ With the backend running, interactive docs and the machine-readable spec are ser
 
 The same specification file lives in the repo at [`backend/docs/openapi.yaml`](./backend/docs/openapi.yaml). Replace the host/port when you deploy.
 
+A **Postman** collection (v2.1, variables, Bearer auth, examples, test scripts) is in [`postman/Budgeteer-API-v2.postman_collection.json`](./postman/Budgeteer-API-v2.postman_collection.json). Import it in Postman or see [`postman/README.md`](./postman/README.md).
+
 ---
 
 ## API Overview
