@@ -4,3 +4,6 @@ dist/
 *.js.map
 
 /src/generated/prisma
+
+# Postman collection generator (contains API key)
+scripts/build_postman_collection.py

@@ -19,7 +19,7 @@ A personal budgeting REST API that lets users plan income and expense budgets wi
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Environment Variables](#environment-variables)
-- [OpenAPI](#openapi)
+- [API Documentation](#api-documentation)
 - [API Reference](#api-reference)
 - [Project Structure](#project-structure)
 - [Key Domain Rules](#key-domain-rules)
@@ -152,7 +152,9 @@ Copy `.env.example` to `.env` and fill in the values below.
 
 ---
 
-## OpenAPI
+## API Documentation
+
+### OpenAPI
 
 Full **OpenAPI 3.0** documentation is shipped with the server (static files under `docs/`).
 
@@ -162,6 +164,20 @@ Full **OpenAPI 3.0** documentation is shipped with the server (static files unde
 | **Spec (YAML)** | `http://localhost:3000/api/v1/docs/openapi.yaml` |
 
 Source file in the repo: [`docs/openapi.yaml`](./docs/openapi.yaml). Use it for code generation, Postman import, or contract tests.
+
+### Postman Collection
+
+The **Budgeteer API v2** Postman collection covers all 24 endpoints with full documentation: use cases, request body schemas, response examples (success and error), query parameter descriptions, and side-effect notes (cascade deletes, bucket regeneration, transaction rename propagation).
+
+Import the collection into Postman from the workspace or regenerate it:
+
+```bash
+python3 scripts/build_postman_collection.py
+```
+
+> Requires a `PMAK-*` API key set in the script. See [`scripts/build_postman_collection.py`](./scripts/build_postman_collection.py).
+
+Collection variables: `baseUrl` (`http://localhost:3000/api/v1`) and `token` (set after login/register).
 
 ---
 

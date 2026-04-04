@@ -15,7 +15,7 @@ A full-stack personal budgeting application. Plan income and expenses in a hiera
 - [What Is Budgeteer?](#what-is-budgeteer)
 - [Tech Stack](#tech-stack)
 - [Quick Start](#quick-start)
-- [API Documentation (OpenAPI)](#api-documentation-openapi)
+- [API Documentation](#api-documentation)
 - [API Overview](#api-overview)
 - [Screenshots](#screenshots)
 - [Frontend Features](#frontend-features)
@@ -97,7 +97,9 @@ The Vite dev server proxies all `/api` requests to `http://localhost:3000` — n
 
 ---
 
-## API Documentation (OpenAPI)
+## API Documentation
+
+### OpenAPI
 
 With the backend running, interactive docs and the machine-readable spec are served alongside the API:
 
@@ -107,6 +109,17 @@ With the backend running, interactive docs and the machine-readable spec are ser
 | **OpenAPI 3 YAML** | `http://localhost:3000/api/v1/docs/openapi.yaml` |
 
 The same specification file lives in the repo at [`backend/docs/openapi.yaml`](./backend/docs/openapi.yaml). Replace the host/port when you deploy.
+
+### Postman Collection
+
+The **Budgeteer API v2** Postman collection includes all 24 endpoints organized into folders (Auth, Budget, Transactions), with documented descriptions, use cases, request/response examples, and error scenarios for every request. Import it into Postman from the workspace or regenerate it with:
+
+```bash
+cd backend
+python3 scripts/build_postman_collection.py
+```
+
+The collection uses two variables: `baseUrl` (default `http://localhost:3000/api/v1`) and `token` (set after login/register). Collection-level Bearer auth propagates the token to all authenticated requests automatically.
 
 ---
 
